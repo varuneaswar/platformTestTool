@@ -1,0 +1,52 @@
+{
+    "users": [
+        {
+            "user_id": "per_thread_test",
+            "database": {
+                "db_type": "postgresql",
+                "host": "127.0.0.1",
+                "port": 5432,
+                "database": "postgres",
+                "username": "postgres",
+                "password": "admin"
+            },
+            "test_config": {
+                "concurrent_connections": 4,
+                "queries_per_connection": 5,
+                "execution_time": 0,
+                "ramp_up_time": 0,
+                "metrics_interval": 5,
+                "single_run_mode": "per_thread",
+                "retry": {
+                    "enabled": true,
+                    "retries": 2,
+                    "skip_nonrelational": true
+                }
+            },
+            "thread_ratios": {
+                "read": 0.75,
+                "write": 0.25,
+                "read_complexity": {
+                    "simple": 0.5,
+                    "medium": 0.5
+                },
+                "write_operations": {
+                    "insert": 1.0
+                },
+                "write_complexity": {
+                    "simple": 1.0
+                }
+            },
+            "queue_settings": {
+                "replenish_interval": 3,
+                "max_queue_size": 500
+            },
+            "query_folder": "queries/postgresql"
+        }
+    ],
+    "logging": {
+        "level": "INFO",
+        "file": "logs/per_thread_smoke.log",
+        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    }
+}

@@ -1,0 +1,13 @@
+# Sample commands to run different load tests
+
+# Read-heavy load test (80% reads, 20% writes)
+python main.py -c configs/read_heavy_load.json
+
+# Write-heavy load test (30% reads, 70% writes)
+python main.py -c configs/write_heavy_load.json
+
+# Mixed load test (50% reads, 50% writes)
+python main.py -c configs/mixed_load.json
+
+# Using default config
+python main.py  # Uses config.json if no -c argument provided

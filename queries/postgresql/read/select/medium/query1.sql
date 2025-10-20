@@ -1,0 +1,1 @@
+SELECT COUNT(*) FROM pg_catalog.pg_tables;

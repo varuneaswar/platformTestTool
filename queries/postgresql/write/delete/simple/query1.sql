@@ -1,0 +1,2 @@
+-- Example delete (replace with your table)
+-- DELETE FROM your_table WHERE id = 1;

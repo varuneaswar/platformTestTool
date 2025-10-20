@@ -1,0 +1,8 @@
+{
+  "action": "find",
+  "collection": "test_collection",
+  "filter": {"status": "active"},
+  "projection": {"_id": 0, "name": 1},
+  "limit": 10,
+  "sort": [["name", 1]]
+}

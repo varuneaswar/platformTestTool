@@ -1,0 +1,57 @@
+{
+    "users": [
+        {
+            "user_id": "mixed_load",
+            "database": {
+                "db_type": "postgresql",
+                "host": "127.0.0.1",
+                "port": 5432,
+                "database": "postgres",
+                "username": "postgres",
+                "password": "admin"
+            },
+            "test_config": {
+                "concurrent_connections": 15,
+                "queries_per_connection": 75,
+                "execution_time": 3600,
+                "ramp_up_time": 300,
+                "metrics_interval": 60,
+                "single_run_mode": "per_query_once",
+                "retry": {
+                    "enabled": true,
+                    "retries": 3,
+                    "skip_nonrelational": true
+                }
+            },
+            "thread_ratios": {
+                "read": 0.5,
+                "write": 0.5,
+                "read_complexity": {
+                    "simple": 0.5,
+                    "medium": 0.3,
+                    "complex": 0.2
+                },
+                "write_operations": {
+                    "insert": 0.4,
+                    "update": 0.4,
+                    "delete": 0.2
+                },
+                "write_complexity": {
+                    "simple": 0.5,
+                    "medium": 0.3,
+                    "complex": 0.2
+                }
+            },
+            "queue_settings": {
+                "replenish_interval": 8,
+                "max_queue_size": 1500
+            },
+            "query_folder": "queries/postgresql"
+        }
+    ],
+    "logging": {
+        "level": "INFO",
+        "file": "logs/mixed_load_soak.log",
+        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    }
+}
