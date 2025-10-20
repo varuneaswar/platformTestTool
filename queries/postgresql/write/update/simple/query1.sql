@@ -1,0 +1,2 @@
+-- Example update (replace with your table)
+-- UPDATE your_table SET col1 = 'new_value' WHERE id = 1;

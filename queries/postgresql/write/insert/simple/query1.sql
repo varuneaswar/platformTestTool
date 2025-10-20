@@ -1,0 +1,2 @@
+-- Example insert (replace with your table)
+-- INSERT INTO your_table (col1) VALUES ('value');

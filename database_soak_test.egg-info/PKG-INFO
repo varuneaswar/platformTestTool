@@ -1,0 +1,193 @@
+Metadata-Version: 2.4
+Name: database-soak-test
+Version: 0.1.0
+Summary: A comprehensive database soak testing framework
+Home-page: https://github.com/yourusername/database-soak-test
+Author: Your Name
+Author-email: your.email@example.com
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Testing
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+Requires-Dist: sqlalchemy>=1.4.0
+Requires-Dist: psycopg2-binary>=2.9.0
+Requires-Dist: pymysql>=1.0.0
+Requires-Dist: pyodbc>=4.0.0
+Requires-Dist: pandas>=1.3.0
+Requires-Dist: numpy>=1.21.0
+Requires-Dist: python-dotenv>=0.19.0
+Requires-Dist: pytest>=6.2.0
+Requires-Dist: pytest-cov>=2.12.0
+Requires-Dist: loguru>=0.5.3
+Requires-Dist: matplotlib>=3.4.0
+Requires-Dist: seaborn>=0.11.0
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# Database Soak Testing Framework
+
+A comprehensive framework for conducting database soak tests, measuring performance, and analyzing results.
+
+## Features
+
+- Support for multiple database types (PostgreSQL, MySQL, MSSQL)
+- Concurrent query execution
+- Detailed performance metrics collection
+- Real-time monitoring and reporting
+- Configurable test scenarios
+- Visualization of results
+- Extensible architecture
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/database-soak-test.git
+cd database-soak-test
+```
+
+2. Create a virtual environment and activate it:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install dependencies:
+```bash
+pip install -e .
+```
+
+## Configuration
+
+1. Create a `.env` file with your database credentials:
+```env
+DB_MAIN_HOST=localhost
+DB_MAIN_PORT=5432
+DB_MAIN_NAME=your_database
+DB_MAIN_USER=your_username
+DB_MAIN_PASSWORD=your_password
+```
+
+2. Create a configuration file `config.json`:
+```json
+{
+    "databases": {
+        "main": {
+            "db_type": "postgresql",
+            "host": "localhost",
+            "port": 5432,
+            "database": "your_database",
+            "username": "your_username",
+            "password": "your_password"
+        }
+    },
+    "test_config": {
+        "concurrent_connections": 5,
+        "queries_per_connection": 100,
+        "execution_time": 3600,
+        "ramp_up_time": 300,
+        "metrics_interval": 60
+    },
+    "logging": {
+        "level": "INFO",
+        "file": "logs/soak_test.log",
+        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    }
+}
+```
+
+## Usage
+
+1. Import the necessary components:
+```python
+from src.core.connection import DatabaseConnection
+from src.core.query_executor import QueryExecutor
+from src.core.performance_metrics import PerformanceMetrics
+from src.config.settings import Settings
+```
+
+2. Initialize the components:
+```python
+# Load settings
+settings = Settings('config.json')
+
+# Create database connection
+db_conn = DatabaseConnection()
+conn_id = 'main'
+db_config = settings.get_database_config(conn_id)
+db_conn.create_connection(conn_id, db_config)
+
+# Initialize query executor and metrics collector
+executor = QueryExecutor(db_conn.get_connection(conn_id))
+metrics = PerformanceMetrics()
+```
+
+3. Execute queries and collect metrics:
+```python
+# Execute a single query
+result = executor.execute_query("SELECT * FROM your_table")
+metrics.record_query_metrics("query1", result)
+
+# Execute multiple queries in parallel
+queries = [
+    {"query": "SELECT * FROM table1"},
+    {"query": "SELECT * FROM table2"}
+]
+results = executor.execute_batch(queries)
+for i, result in enumerate(results):
+    metrics.record_query_metrics(f"batch_query_{i}", result)
+
+# Generate performance report
+report = metrics.get_performance_report()
+print(report)
+```
+
+## Creating Test Scenarios
+
+1. Create a new test scenario class:
+```python
+from src.tests.test_scenarios.base_scenario import BaseTestScenario
+
+class CustomTestScenario(BaseTestScenario):
+    def setup(self):
+        # Setup test data or environment
+        pass
+        
+    def execute(self):
+        # Execute test logic
+        pass
+        
+    def cleanup(self):
+        # Clean up test data or environment
+        pass
+```
+
+2. Run the test scenario:
+```python
+scenario = CustomTestScenario(settings)
+scenario.run()
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

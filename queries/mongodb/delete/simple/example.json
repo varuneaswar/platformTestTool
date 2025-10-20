@@ -1,0 +1,5 @@
+{
+  "action": "delete_many",
+  "collection": "test_collection",
+  "filter": {"status": "inactive"}
+}

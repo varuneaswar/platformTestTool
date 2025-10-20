@@ -1,0 +1,57 @@
+{
+    "users": [
+        {
+            "user_id": "read_heavy",
+            "database": {
+                "db_type": "postgresql",
+                "host": "127.0.0.1",
+                "port": 5432,
+                "database": "postgres",
+                "username": "postgres",
+                "password": "admin"
+            },
+            "test_config": {
+                "concurrent_connections": 20,
+                "queries_per_connection": 100,
+                "execution_time": 60,
+                "ramp_up_time": 30,
+                "metrics_interval": 60,
+                "single_run_mode": "per_thread",
+                "retry": {
+                    "enabled": true,
+                    "retries": 3,
+                    "skip_nonrelational": true
+                }
+            },
+            "thread_ratios": {
+                "read": 0.8,
+                "write": 0.2,
+                "read_complexity": {
+                    "simple": 0.6,
+                    "medium": 0.3,
+                    "complex": 0.1
+                },
+                "write_operations": {
+                    "insert": 0.4,
+                    "update": 0.4,
+                    "delete": 0.2
+                },
+                "write_complexity": {
+                    "simple": 0.7,
+                    "medium": 0.2,
+                    "complex": 0.1
+                }
+            },
+            "queue_settings": {
+                "replenish_interval": 5,
+                "max_queue_size": 2000
+            },
+            "query_folder": "queries/postgresql"
+        }
+    ],
+    "logging": {
+        "level": "INFO",
+        "file": "logs/read_heavy_soak.log",
+        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    }
+}

@@ -1,0 +1,6 @@
+{
+  "action": "update_many",
+  "collection": "test_collection",
+  "filter": {"status": "active"},
+  "update": { "$set": {"status": "inactive"} }
+}

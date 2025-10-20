@@ -1,0 +1,6 @@
+{
+  // Insert a single document
+  action: 'insert_one',
+  collection: 'test_collection',
+  document: { name: 'Alice', status: 'active' }
+}
