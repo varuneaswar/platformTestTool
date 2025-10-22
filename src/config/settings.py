@@ -33,33 +33,54 @@ class Settings:
             self.logger.error(f"Failed to load configuration: {str(e)}")
             raise
 
-    def get_database_config(self, connection_id: str) -> Dict[str, Any]:
+    def get_database_config(self, connection_id: str, user_db_config: Dict[str, Any] = None) -> Dict[str, Any]:
         """
-        Get database connection configuration.
+        Get database connection configuration with environment variable support.
+        
+        This method supports two modes:
+        1. Centralized databases config: Load from config['databases'][connection_id]
+        2. Inline user config: Use provided user_db_config with env var overrides
         
         Args:
-            connection_id: Identifier for the database connection
+            connection_id: Identifier for the database connection (used for env var prefix)
+            user_db_config: Optional inline database config from user config
             
         Returns:
             Dictionary containing database connection parameters
         """
-        if 'databases' not in self.config:
-            raise KeyError("No database configurations found")
-            
-        db_config = self.config['databases'].get(connection_id)
-        if not db_config:
-            raise KeyError(f"No configuration found for connection {connection_id}")
+        # Start with user-provided config or fetch from centralized databases section
+        if user_db_config is not None:
+            db_config = user_db_config.copy()
+        elif 'databases' in self.config and connection_id in self.config['databases']:
+            db_config = self.config['databases'][connection_id].copy()
+        else:
+            # If no config provided, try to build entirely from environment variables
+            db_config = {}
             
         # Override with environment variables if they exist
         env_prefix = f"DB_{connection_id.upper()}_"
-        db_config.update({
-            'host': os.getenv(f"{env_prefix}HOST", db_config.get('host')),
-            'port': os.getenv(f"{env_prefix}PORT", db_config.get('port')),
-            'database': os.getenv(f"{env_prefix}NAME", db_config.get('database')),
-            'username': os.getenv(f"{env_prefix}USER", db_config.get('username')),
-            'password': os.getenv(f"{env_prefix}PASSWORD", db_config.get('password'))
-        })
         
+        # Get db_type from environment or config
+        db_type = os.getenv(f"{env_prefix}TYPE", db_config.get('db_type'))
+        if db_type:
+            db_config['db_type'] = db_type
+            
+        # Common database connection parameters
+        if os.getenv(f"{env_prefix}HOST"):
+            db_config['host'] = os.getenv(f"{env_prefix}HOST")
+        if os.getenv(f"{env_prefix}PORT"):
+            db_config['port'] = int(os.getenv(f"{env_prefix}PORT"))
+        if os.getenv(f"{env_prefix}NAME"):
+            db_config['database'] = os.getenv(f"{env_prefix}NAME")
+        if os.getenv(f"{env_prefix}USER"):
+            db_config['username'] = os.getenv(f"{env_prefix}USER")
+        if os.getenv(f"{env_prefix}PASSWORD"):
+            db_config['password'] = os.getenv(f"{env_prefix}PASSWORD")
+            
+        # Oracle-specific service_name parameter
+        if os.getenv(f"{env_prefix}SERVICE_NAME"):
+            db_config['service_name'] = os.getenv(f"{env_prefix}SERVICE_NAME")
+            
         return db_config
 
     def get_test_config(self) -> Dict[str, Any]:
