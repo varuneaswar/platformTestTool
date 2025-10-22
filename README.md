@@ -75,12 +75,48 @@ pip install -r requirements.txt
 
 ### Required Packages
 Core dependencies are organized in `requirements.txt`:
-- **Database drivers**: sqlalchemy (2.0+), psycopg2-binary, pymysql, pyodbc
+- **Database drivers**: sqlalchemy (2.0+), psycopg2-binary, pymysql, pyodbc, oracledb
 - **NoSQL clients**: pymongo, redis
 - **Data processing**: pandas, numpy
 - **Visualization**: matplotlib, seaborn (static plots only)
 - **Logging**: loguru
 - **Testing**: pytest, pytest-cov
+
+### Database-Specific Setup
+
+#### Oracle Database
+For Oracle support, the framework uses the `oracledb` driver (formerly known as cx_Oracle). 
+
+**Installation**:
+```bash
+pip install oracledb
+```
+
+**Connection Configuration**:
+Oracle connections require the following parameters in your config file:
+```json
+{
+  "database": {
+    "db_type": "oracle",
+    "host": "localhost",
+    "port": 1521,
+    "database": "ORCLPDB1",
+    "service_name": "ORCLPDB1",
+    "username": "system",
+    "password": "oracle"
+  }
+}
+```
+
+**Key points**:
+- Use `service_name` for Oracle service name (defaults to `database` value if not specified)
+- Default Oracle port is 1521
+- Ensure the Oracle client libraries are installed if using thick mode
+- For Oracle Autonomous Database, download the wallet and configure TNS_ADMIN
+
+**Example configuration**: See `configs/oracle_example.json`
+
+**Example queries**: See `queries/oracle/README.md` for Oracle-specific query examples and setup instructions
 
 ## Configuration
 
