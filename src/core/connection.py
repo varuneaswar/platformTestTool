@@ -19,12 +19,14 @@ class DatabaseConnection:
             conn_id: Unique identifier for the connection
             config: Dictionary containing connection parameters
                 Required keys:
-                - db_type: Type of database (mysql, postgresql, mssql)
+                - db_type: Type of database (mysql, postgresql, mssql, oracle)
                 - host: Database host
                 - port: Database port
-                - database: Database name
+                - database: Database name (or service_name for Oracle)
                 - username: Database username
                 - password: Database password
+                Optional keys for Oracle:
+                - service_name: Oracle service name (defaults to database value)
         
         Returns:
             bool: True if connection successful, False otherwise
@@ -60,6 +62,11 @@ class DatabaseConnection:
             return f"mysql+pymysql://{username}:{password}@{host}:{port}/{database}"
         elif db_type == 'mssql':
             return f"mssql+pyodbc://{username}:{password}@{host}:{port}/{database}?driver=ODBC+Driver+17+for+SQL+Server"
+        elif db_type == 'oracle':
+            # Oracle connection using oracledb driver
+            # Format: oracle+oracledb://user:pass@host:port/?service_name=service
+            service_name = config.get('service_name', database)
+            return f"oracle+oracledb://{username}:{password}@{host}:{port}/?service_name={service_name}"
         else:
             raise ValueError(f"Unsupported database type: {db_type}")
 

@@ -15,17 +15,35 @@ from concurrent.futures import ThreadPoolExecutor
 def run_user_soak(user_config):
     # Helper to insert metrics into soak_test_metrics table
     from sqlalchemy import text
-    def insert_metric_to_db(metric, db_conn, conn_id):
+    def insert_metric_to_db(metric, db_conn, conn_id, db_type):
         from sqlalchemy import text
         try:
             engine = db_conn.get_connection(conn_id)
             with engine.begin() as conn:
-                insert_sql = text('''
+                # Use database-specific timestamp conversion
+                if db_type == 'oracle':
+                    # Oracle uses TO_TIMESTAMP with FROM_TZ for epoch conversion
+                    timestamp_func = "TO_TIMESTAMP('1970-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS') + NUMTODSINTERVAL(:start_time, 'SECOND')"
+                    timestamp_func_end = "TO_TIMESTAMP('1970-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS') + NUMTODSINTERVAL(:end_time, 'SECOND')"
+                elif db_type == 'mssql':
+                    # SQL Server uses DATEADD with epoch
+                    timestamp_func = "DATEADD(second, :start_time, '1970-01-01 00:00:00')"
+                    timestamp_func_end = "DATEADD(second, :end_time, '1970-01-01 00:00:00')"
+                elif db_type == 'mysql':
+                    # MySQL uses FROM_UNIXTIME
+                    timestamp_func = "FROM_UNIXTIME(:start_time)"
+                    timestamp_func_end = "FROM_UNIXTIME(:end_time)"
+                else:
+                    # PostgreSQL and others use to_timestamp
+                    timestamp_func = "to_timestamp(:start_time)"
+                    timestamp_func_end = "to_timestamp(:end_time)"
+                
+                insert_sql = text(f'''
                     INSERT INTO soak_test_metrics (
                         job_id, test_case_id, start_time, end_time, duration, success, error, rows_affected, memory_usage, cpu_time,
                         query_gist, file_name, operation, complexity, thread_name, return_code, error_code, error_desc, rows_processed
                     ) VALUES (
-                        :job_id, :test_case_id, to_timestamp(:start_time), to_timestamp(:end_time), :duration, :success, :error, :rows_affected, :memory_usage, :cpu_time,
+                        :job_id, :test_case_id, {timestamp_func}, {timestamp_func_end}, :duration, :success, :error, :rows_affected, :memory_usage, :cpu_time,
                         :query_gist, :file_name, :operation, :complexity, :thread_name, :return_code, :error_code, :error_desc, :rows_processed
                     )
                 ''')
@@ -576,7 +594,7 @@ def run_user_soak(user_config):
                 }
                 metrics.record_query_metrics(metric_id, metric_full)
                 if db_type in ['postgresql', 'mysql', 'mssql', 'oracle'] and db_conn:
-                    insert_metric_to_db(metric_full, db_conn, user_id)
+                    insert_metric_to_db(metric_full, db_conn, user_id, db_type)
                 if not result.get('success', True):
                     logger.error(f"[{job_id}][{test_case_id}][{user_id}][{key}][thread-{local_count}] Query error: {result.get('error')} | Query: {query.get('query', query)}")
                 else:

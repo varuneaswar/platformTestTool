@@ -9,6 +9,7 @@ setup(
         "psycopg2-binary>=2.9.0",
         "pymysql>=1.0.0",
         "pyodbc>=4.0.0",
+        "oracledb>=1.0.0",
         "pandas>=1.3.0",
         "numpy>=1.21.0",
         "python-dotenv>=0.19.0",
