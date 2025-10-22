@@ -1,0 +1,11 @@
+{
+    "metrics_database": {
+        "db_type": "postgresql",
+        "host": "127.0.0.1",
+        "port": 5432,
+        "database": "metrics_db",
+        "username": "metrics_user",
+        "password": "metrics_password",
+        "table_name": "soak_test_metrics"
+    }
+}
