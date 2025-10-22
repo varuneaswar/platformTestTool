@@ -120,6 +120,133 @@ Oracle connections require the following parameters in your config file:
 
 ## Configuration
 
+### Environment-Based Configuration (Recommended)
+
+For enhanced security, database credentials should be stored in environment variables rather than committed to version control. The framework supports loading credentials from a `.env` file.
+
+#### Setup Steps
+
+1. **Copy the example environment file**:
+```bash
+cp .env.example .env
+```
+
+2. **Edit `.env` with your actual credentials**:
+```bash
+# Example for PostgreSQL
+DB_POSTGRES_PRIMARY_TYPE=postgresql
+DB_POSTGRES_PRIMARY_HOST=localhost
+DB_POSTGRES_PRIMARY_PORT=5432
+DB_POSTGRES_PRIMARY_NAME=postgres
+DB_POSTGRES_PRIMARY_USER=postgres
+DB_POSTGRES_PRIMARY_PASSWORD=your_actual_password
+```
+
+3. **Reference the database in your config file**:
+```json
+{
+  "users": [
+    {
+      "user_id": "user1",
+      "database_ref": "postgres_primary",
+      "test_config": { ... },
+      "thread_ratios": { ... },
+      "query_folder": "queries/postgresql"
+    }
+  ]
+}
+```
+
+**Important**: The `.env` file is excluded from version control via `.gitignore` to prevent accidental credential exposure.
+
+### Multiple Database Support
+
+The framework supports testing multiple databases simultaneously using two approaches:
+
+#### Approach 1: Centralized Database Configuration (Recommended)
+
+Define multiple database configurations in a single config file:
+
+```json
+{
+  "databases": {
+    "postgres_primary": {
+      "db_type": "postgresql",
+      "host": "localhost",
+      "port": 5432,
+      "database": "postgres",
+      "username": "postgres",
+      "password": "admin"
+    },
+    "mysql_primary": {
+      "db_type": "mysql",
+      "host": "localhost",
+      "port": 3306,
+      "database": "testdb",
+      "username": "root",
+      "password": "admin"
+    }
+  },
+  "users": [
+    {
+      "user_id": "user1_postgres",
+      "database_ref": "postgres_primary",
+      ...
+    },
+    {
+      "user_id": "user2_mysql",
+      "database_ref": "mysql_primary",
+      ...
+    }
+  ]
+}
+```
+
+**Note**: Credentials in the `databases` section can still be overridden by environment variables using the pattern `DB_{DATABASE_REF}_*`.
+
+#### Approach 2: Inline Database Configuration (Legacy)
+
+Each user can have their own inline database configuration:
+
+```json
+{
+  "users": [
+    {
+      "user_id": "user1",
+      "database": {
+        "db_type": "postgresql",
+        "host": "localhost",
+        "port": 5432,
+        "database": "postgres",
+        "username": "postgres",
+        "password": "admin"
+      },
+      ...
+    }
+  ]
+}
+```
+
+**Note**: Inline configurations can be overridden by environment variables using the pattern `DB_{USER_ID}_*`.
+
+### Environment Variable Naming Convention
+
+Environment variables follow this pattern:
+```
+DB_{CONNECTION_ID}_{PARAMETER}
+```
+
+Examples:
+- `DB_POSTGRES_PRIMARY_HOST=localhost`
+- `DB_POSTGRES_PRIMARY_PORT=5432`
+- `DB_POSTGRES_PRIMARY_USER=admin`
+- `DB_POSTGRES_PRIMARY_PASSWORD=secret`
+- `DB_ORACLE_PRIMARY_SERVICE_NAME=ORCLPDB1` (Oracle-specific)
+
+For inline configurations, use the `user_id` as the connection ID:
+- `DB_USER1_HOST=localhost`
+- `DB_USER1_PASSWORD=secret`
+
 ### Configuration Structure
 
 The framework uses JSON configuration files supporting multi-user scenarios. Pre-configured templates are available in `configs/`:
@@ -127,22 +254,18 @@ The framework uses JSON configuration files supporting multi-user scenarios. Pre
 - `write_heavy_load.json` - 30% read, 70% write operations  
 - `mixed_load.json` - 50/50 read/write balance
 - `quick_read_smoke.json` - Short smoke test (10 seconds)
+- `multi_database_example.json` - Multiple databases with centralized config
+- `env_based_example.json` - Environment variable based configuration
 
 ### Configuration Options
 
+#### Using database_ref (Recommended)
 ```json
 {
   "users": [
     {
       "user_id": "unique_user_identifier",
-      "database": {
-        "db_type": "postgresql",  // postgresql, mysql, mssql, oracle, mongodb, redis
-        "host": "localhost",
-        "port": 5432,
-        "database": "your_database",
-        "username": "your_username",
-        "password": "your_password"
-      },
+      "database_ref": "postgres_primary",  // Reference to database in "databases" section or .env
       "test_config": {
         "concurrent_connections": 20,        // Number of concurrent threads
         "execution_time": 600,              // Duration in seconds (0 = single run mode)

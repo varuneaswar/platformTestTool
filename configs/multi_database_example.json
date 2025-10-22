@@ -1,0 +1,112 @@
+{
+    "databases": {
+        "postgres_primary": {
+            "db_type": "postgresql",
+            "host": "localhost",
+            "port": 5432,
+            "database": "postgres",
+            "username": "postgres",
+            "password": "admin"
+        },
+        "mysql_primary": {
+            "db_type": "mysql",
+            "host": "localhost",
+            "port": 3306,
+            "database": "testdb",
+            "username": "root",
+            "password": "admin"
+        },
+        "mongodb_primary": {
+            "db_type": "mongodb",
+            "host": "localhost",
+            "port": 27017,
+            "database": "testdb",
+            "username": "admin",
+            "password": "admin"
+        }
+    },
+    "users": [
+        {
+            "user_id": "user1_postgres",
+            "database_ref": "postgres_primary",
+            "test_config": {
+                "concurrent_connections": 10,
+                "queries_per_connection": 10,
+                "execution_time": 60,
+                "ramp_up_time": 30,
+                "metrics_interval": 60,
+                "single_run_mode": "per_thread",
+                "retry": {
+                    "enabled": true,
+                    "retries": 3,
+                    "skip_nonrelational": true
+                }
+            },
+            "thread_ratios": {
+                "read": 0.6,
+                "write": 0.4,
+                "read_complexity": {
+                    "simple": 0.5,
+                    "medium": 0.3,
+                    "complex": 0.2
+                },
+                "write_operations": {
+                    "insert": 0.5,
+                    "update": 0.3,
+                    "delete": 0.2
+                },
+                "write_complexity": {
+                    "simple": 0.4,
+                    "medium": 0.4,
+                    "complex": 0.2
+                }
+            },
+            "queue_settings": {
+                "replenish_interval": 10,
+                "max_queue_size": 1000
+            },
+            "query_folder": "queries/postgresql"
+        },
+        {
+            "user_id": "user2_mysql",
+            "database_ref": "mysql_primary",
+            "test_config": {
+                "concurrent_connections": 5,
+                "queries_per_connection": 10,
+                "execution_time": 60,
+                "ramp_up_time": 30,
+                "metrics_interval": 60,
+                "single_run_mode": "per_thread"
+            },
+            "thread_ratios": {
+                "read": 0.7,
+                "write": 0.3,
+                "read_complexity": {
+                    "simple": 0.7,
+                    "medium": 0.2,
+                    "complex": 0.1
+                },
+                "write_operations": {
+                    "insert": 0.6,
+                    "update": 0.3,
+                    "delete": 0.1
+                },
+                "write_complexity": {
+                    "simple": 0.5,
+                    "medium": 0.3,
+                    "complex": 0.2
+                }
+            },
+            "queue_settings": {
+                "replenish_interval": 10,
+                "max_queue_size": 1000
+            },
+            "query_folder": "queries/mysql"
+        }
+    ],
+    "logging": {
+        "level": "INFO",
+        "file": "logs/multi_db_test.log",
+        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    }
+}

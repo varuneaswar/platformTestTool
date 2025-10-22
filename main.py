@@ -91,9 +91,29 @@ def run_user_soak(user_config):
     job_id = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(24))
     import os
     from datetime import datetime
-    db_type = user_config['database'].get('db_type', 'unknown').lower()
-    db_user = user_config['database'].get('username', 'unknown')
-    single_run_mode_val = str(user_config['test_config'].get('single_run_mode', 'per_thread'))
+    
+    user_id = user_config['user_id']
+    test_config = user_config['test_config']
+    
+    # Support for database_ref to reference centralized database configs
+    # Load environment variables first
+    from src.config.settings import Settings
+    settings_loader = Settings(None)
+    settings_loader.load_env()
+    
+    if 'database_ref' in user_config:
+        # Load database config from centralized config or environment
+        db_ref = user_config['database_ref']
+        db_config = settings_loader.get_database_config(db_ref)
+    else:
+        # Use inline database config with environment variable overrides
+        db_config = user_config['database']
+        # Apply environment variable overrides using the user_id as connection_id
+        db_config = settings_loader.get_database_config(user_id, db_config)
+    
+    db_type = db_config.get('db_type', 'unknown').lower()
+    db_user = db_config.get('username', 'unknown')
+    single_run_mode_val = str(test_config.get('single_run_mode', 'per_thread'))
     if single_run_mode_val == 'per_thread':
         test_type = 'soaktest'
     elif single_run_mode_val == 'per_query_once':
@@ -122,9 +142,6 @@ def run_user_soak(user_config):
     LoggingUtils.setup_logging({"file": log_file, "level": "INFO"})
     import threading
     import queue
-    user_id = user_config['user_id']
-    db_config = user_config['database']
-    test_config = user_config['test_config']
     duration = test_config['execution_time']
     # Single run mode: 'per_thread' (default: fixed runs per thread) or 'per_query_once' (each query file executed once)
     single_run_mode = str(test_config.get('single_run_mode', 'per_thread'))
@@ -141,7 +158,6 @@ def run_user_soak(user_config):
     queue_settings = user_config.get('queue_settings', {"replenish_interval": 10, "max_queue_size": 1000})
 
     logger = LoggingUtils.get_logger(f"user_{user_id}")
-    db_type = db_config.get('db_type', 'postgresql').lower()
     metrics = PerformanceMetrics()
 
     # Use extensible handler abstraction
