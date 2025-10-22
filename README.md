@@ -226,6 +226,23 @@ python main.py -c configs/read_heavy_load.json --metrics-config configs/metrics_
 
 **Note**: If no metrics configuration is provided, metrics will be stored in the test target database (default behavior).
 
+**Setting up the Metrics Table**:
+
+Before running tests with a separate metrics database, ensure the `soak_test_metrics` table exists. Use the provided schema:
+
+```bash
+# For PostgreSQL
+psql -h metrics-server.example.com -U metrics_user -d metrics_db -f configs/metrics_table_schema.sql
+
+# For MySQL
+mysql -h metrics-server.example.com -u metrics_user -p metrics_db < configs/metrics_table_schema.sql
+```
+
+The schema file (`configs/metrics_table_schema.sql`) includes:
+- Table structure with all required columns
+- Indexes for optimal query performance
+- Notes for adapting to MSSQL and Oracle
+
 ### Query File Organization
 
 Queries must be organized in a hierarchical structure:
