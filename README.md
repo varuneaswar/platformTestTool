@@ -190,6 +190,59 @@ The framework uses JSON configuration files supporting multi-user scenarios. Pre
 }
 ```
 
+### Metrics Database Configuration (Optional)
+
+You can optionally store test metrics in a separate database by creating a metrics database configuration file and passing it using the `--metrics-config` parameter. This allows you to:
+- Keep metrics separate from your test target database
+- Use a different database type or server for metrics storage
+- Centralize metrics collection from multiple test runs
+
+Create a metrics configuration file (e.g., `configs/metrics_db.json`):
+
+```json
+{
+    "metrics_database": {
+        "db_type": "postgresql",
+        "host": "metrics-server.example.com",
+        "port": 5432,
+        "database": "metrics_db",
+        "username": "metrics_user",
+        "password": "metrics_password",
+        "table_name": "soak_test_metrics"
+    }
+}
+```
+
+**Supported Metrics Database Types**: PostgreSQL, MySQL, MSSQL, Oracle
+
+**Using the Metrics Configuration**:
+```bash
+# Run tests with separate metrics database
+python main.py -c configs/read_heavy_load.json -m configs/metrics_db.json
+
+# Short form
+python main.py -c configs/read_heavy_load.json --metrics-config configs/metrics_db.json
+```
+
+**Note**: If no metrics configuration is provided, metrics will be stored in the test target database (default behavior).
+
+**Setting up the Metrics Table**:
+
+Before running tests with a separate metrics database, ensure the `soak_test_metrics` table exists. Use the provided schema:
+
+```bash
+# For PostgreSQL
+psql -h metrics-server.example.com -U metrics_user -d metrics_db -f configs/metrics_table_schema.sql
+
+# For MySQL
+mysql -h metrics-server.example.com -u metrics_user -p metrics_db < configs/metrics_table_schema.sql
+```
+
+The schema file (`configs/metrics_table_schema.sql`) includes:
+- Table structure with all required columns
+- Indexes for optimal query performance
+- Notes for adapting to MSSQL and Oracle
+
 ### Query File Organization
 
 Queries must be organized in a hierarchical structure:
@@ -230,6 +283,9 @@ python main.py -c configs/read_heavy_load.json
 
 # Quick smoke test (10 seconds)
 python main.py -c configs/quick_read_smoke.json
+
+# Run with separate metrics database
+python main.py -c configs/read_heavy_load.json -m configs/metrics_db.json
 ```
 
 #### With Virtual Environment

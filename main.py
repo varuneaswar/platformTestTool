@@ -12,10 +12,10 @@ from concurrent.futures import ThreadPoolExecutor
 
 
 
-def run_user_soak(user_config):
+def run_user_soak(user_config, metrics_config=None):
     # Helper to insert metrics into soak_test_metrics table
     from sqlalchemy import text
-    def insert_metric_to_db(metric, db_conn, conn_id, db_type):
+    def insert_metric_to_db(metric, db_conn, conn_id, db_type, table_name='soak_test_metrics'):
         from sqlalchemy import text
         try:
             engine = db_conn.get_connection(conn_id)
@@ -39,7 +39,7 @@ def run_user_soak(user_config):
                     timestamp_func_end = "to_timestamp(:end_time)"
                 
                 insert_sql = text(f'''
-                    INSERT INTO soak_test_metrics (
+                    INSERT INTO {table_name} (
                         job_id, test_case_id, start_time, end_time, duration, success, error, rows_affected, memory_usage, cpu_time,
                         query_gist, file_name, operation, complexity, thread_name, return_code, error_code, error_desc, rows_processed
                     ) VALUES (
@@ -155,6 +155,30 @@ def run_user_soak(user_config):
     executor = handler.get_executor(user_id)
     db_conn = getattr(handler, 'db_conn', None)
     nonrel_client = getattr(handler, 'client', None)
+
+    # Initialize separate metrics database connection if config is provided
+    metrics_db_conn = None
+    metrics_db_type = None
+    metrics_table_name = 'soak_test_metrics'
+    if metrics_config and 'metrics_database' in metrics_config:
+        try:
+            metrics_db_config = metrics_config['metrics_database']
+            metrics_db_type = metrics_db_config.get('db_type', 'postgresql').lower()
+            metrics_table_name = metrics_db_config.get('table_name', 'soak_test_metrics')
+            
+            # Create a unique connection ID for metrics database
+            metrics_conn_id = f"{user_id}_metrics"
+            
+            # Use the same handler pattern for metrics database connection
+            metrics_handler = get_db_handler(metrics_db_type)
+            metrics_handler.connect(metrics_conn_id, metrics_db_config)
+            metrics_db_conn = getattr(metrics_handler, 'db_conn', None)
+            
+            logger.info(f"[{user_id}] Connected to metrics database: {metrics_db_config.get('host')}:{metrics_db_config.get('port')}/{metrics_db_config.get('database')}")
+        except Exception as e:
+            logger.warning(f"[{user_id}] Failed to connect to metrics database: {e}. Metrics will be stored in test database.")
+            metrics_db_conn = None
+
 
     # Thread pool setup
     total_threads = test_config.get('concurrent_connections', 2)
@@ -593,8 +617,12 @@ def run_user_soak(user_config):
                     'user_id': user_id
                 }
                 metrics.record_query_metrics(metric_id, metric_full)
-                if db_type in ['postgresql', 'mysql', 'mssql', 'oracle'] and db_conn:
-                    insert_metric_to_db(metric_full, db_conn, user_id, db_type)
+                # Insert to metrics database if configured, otherwise use test database
+                target_db_conn = metrics_db_conn if metrics_db_conn else db_conn
+                target_db_type = metrics_db_type if metrics_db_type else db_type
+                target_conn_id = f"{user_id}_metrics" if metrics_db_conn else user_id
+                if target_db_type in ['postgresql', 'mysql', 'mssql', 'oracle'] and target_db_conn:
+                    insert_metric_to_db(metric_full, target_db_conn, target_conn_id, target_db_type, metrics_table_name)
                 if not result.get('success', True):
                     logger.error(f"[{job_id}][{test_case_id}][{user_id}][{key}][thread-{local_count}] Query error: {result.get('error')} | Query: {query.get('query', query)}")
                 else:
@@ -715,6 +743,12 @@ def run_user_soak(user_config):
     logger.info(f"[{job_id}] Soak test completed.")
     if handler:
         handler.close()
+    if metrics_db_conn and metrics_config:
+        try:
+            metrics_handler.close()
+            logger.info(f"[{user_id}] Closed metrics database connection")
+        except Exception as e:
+            logger.warning(f"[{user_id}] Error closing metrics database connection: {e}")
 
 def main():
     import argparse
@@ -724,6 +758,9 @@ def main():
     parser.add_argument('--config', '-c', 
                       help='Path to the configuration file (e.g., configs/read_heavy_load.json)',
                       default='config.json')
+    parser.add_argument('--metrics-config', '-m',
+                      help='Path to the metrics database configuration file (e.g., configs/metrics_db.json)',
+                      default=None)
     args = parser.parse_args()
 
     if not os.path.exists(args.config):
@@ -736,6 +773,16 @@ def main():
                     print(f"  - {os.path.join(configs_dir, file)}")
         return
 
+    # Load metrics database configuration if provided
+    metrics_config = None
+    if args.metrics_config:
+        if not os.path.exists(args.metrics_config):
+            print(f"Error: Metrics config file not found: {args.metrics_config}")
+            return
+        import json
+        with open(args.metrics_config, 'r') as f:
+            metrics_config = json.load(f)
+
     settings = Settings(args.config)
     LoggingUtils.setup_logging(settings.get_logging_config())
     users = settings.config.get('users', [])
@@ -747,7 +794,7 @@ def main():
 
     logger.info(f"Starting soak tests for {len(users)} users")
     with ThreadPoolExecutor(max_workers=len(users)) as executor:
-        futures = [executor.submit(run_user_soak, user) for user in users]
+        futures = [executor.submit(run_user_soak, user, metrics_config) for user in users]
         for future in futures:
             future.result()
 
