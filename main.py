@@ -15,10 +15,14 @@ from concurrent.futures import ThreadPoolExecutor
 def run_user_soak(user_config):
     # Helper to insert metrics into soak_test_metrics table
     from sqlalchemy import text
-    def insert_metric_to_db(metric, db_conn, conn_id, db_type):
+    def insert_metric_to_db(metric, db_conn, conn_id, db_type, metrics_db_conn=None, metrics_conn_id=None):
         from sqlalchemy import text
         try:
-            engine = db_conn.get_connection(conn_id)
+            # Use metrics database connection if provided, otherwise fall back to test database
+            if metrics_db_conn and metrics_conn_id:
+                engine = metrics_db_conn.get_connection(metrics_conn_id)
+            else:
+                engine = db_conn.get_connection(conn_id)
             with engine.begin() as conn:
                 # Use database-specific timestamp conversion
                 if db_type == 'oracle':
@@ -155,6 +159,29 @@ def run_user_soak(user_config):
     executor = handler.get_executor(user_id)
     db_conn = getattr(handler, 'db_conn', None)
     nonrel_client = getattr(handler, 'client', None)
+
+    # Setup metrics database connection if configured separately
+    metrics_db_config = user_config.get('metrics_database')
+    metrics_handler = None
+    metrics_db_conn = None
+    metrics_conn_id = None
+    
+    if metrics_db_config:
+        # Separate metrics database is configured
+        metrics_db_type = metrics_db_config.get('db_type', 'postgresql').lower()
+        metrics_conn_id = f"{user_id}_metrics"
+        try:
+            metrics_handler = get_db_handler(metrics_db_type)
+            metrics_handler.connect(metrics_conn_id, metrics_db_config)
+            metrics_db_conn = getattr(metrics_handler, 'db_conn', None)
+            logger.info(f"[{user_id}] Using separate metrics database: {metrics_db_config.get('host')}:{metrics_db_config.get('database')}")
+        except Exception as e:
+            logger.warning(f"[{user_id}] Failed to connect to metrics database, falling back to test database: {str(e)}")
+            metrics_handler = None
+            metrics_db_conn = None
+            metrics_conn_id = None
+    else:
+        logger.info(f"[{user_id}] Using test database for metrics storage")
 
     # Thread pool setup
     total_threads = test_config.get('concurrent_connections', 2)
@@ -593,8 +620,11 @@ def run_user_soak(user_config):
                     'user_id': user_id
                 }
                 metrics.record_query_metrics(metric_id, metric_full)
+                # Insert metrics to database - use metrics database if configured, otherwise test database
                 if db_type in ['postgresql', 'mysql', 'mssql', 'oracle'] and db_conn:
-                    insert_metric_to_db(metric_full, db_conn, user_id, db_type)
+                    # Determine which database type to use for metrics insertion
+                    metrics_insert_db_type = metrics_db_config.get('db_type', db_type).lower() if metrics_db_config else db_type
+                    insert_metric_to_db(metric_full, db_conn, user_id, metrics_insert_db_type, metrics_db_conn, metrics_conn_id)
                 if not result.get('success', True):
                     logger.error(f"[{job_id}][{test_case_id}][{user_id}][{key}][thread-{local_count}] Query error: {result.get('error')} | Query: {query.get('query', query)}")
                 else:
@@ -713,8 +743,12 @@ def run_user_soak(user_config):
     metrics.export_metrics(metrics_json_path)
     generate_csv_report_from_json(metrics_json_path, user_config, job_id, result_folder, csv_report_name)
     logger.info(f"[{job_id}] Soak test completed.")
+    
+    # Close database connections
     if handler:
         handler.close()
+    if metrics_handler:
+        metrics_handler.close()
 
 def main():
     import argparse

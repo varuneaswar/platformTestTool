@@ -127,6 +127,7 @@ The framework uses JSON configuration files supporting multi-user scenarios. Pre
 - `write_heavy_load.json` - 30% read, 70% write operations  
 - `mixed_load.json` - 50/50 read/write balance
 - `quick_read_smoke.json` - Short smoke test (10 seconds)
+- `read_heavy_with_metrics_db.json` - Example with separate metrics database
 
 ### Configuration Options
 
@@ -142,6 +143,14 @@ The framework uses JSON configuration files supporting multi-user scenarios. Pre
         "database": "your_database",
         "username": "your_username",
         "password": "your_password"
+      },
+      "metrics_database": {         // OPTIONAL: Separate database for metrics storage
+        "db_type": "postgresql",    // If omitted, metrics are stored in test database
+        "host": "localhost",
+        "port": 5432,
+        "database": "metrics_db",
+        "username": "metrics_user",
+        "password": "metrics_password"
       },
       "test_config": {
         "concurrent_connections": 20,        // Number of concurrent threads
@@ -189,6 +198,40 @@ The framework uses JSON configuration files supporting multi-user scenarios. Pre
   }
 }
 ```
+
+### Separate Metrics Database (Optional)
+
+You can optionally configure a separate database for storing test metrics, which provides several benefits:
+- **Improved Security**: Keep test data separate from metrics data
+- **Better Organization**: Dedicated database for historical test metrics
+- **Flexibility**: Use different database types for testing vs metrics storage
+- **Simplified Access**: Users viewing metrics don't need credentials to test databases
+
+To use a separate metrics database, add the `metrics_database` section to your user configuration:
+
+```json
+{
+  "user_id": "my_test",
+  "database": {
+    "db_type": "postgresql",
+    "host": "test-db.example.com",
+    "database": "application_db",
+    "username": "test_user",
+    "password": "test_password"
+  },
+  "metrics_database": {
+    "db_type": "postgresql",
+    "host": "metrics-db.example.com",
+    "database": "test_metrics",
+    "username": "metrics_user",
+    "password": "metrics_password"
+  }
+}
+```
+
+**Note**: The `metrics_database` configuration is completely optional. If not provided, metrics will be stored in the test database as before, maintaining full backward compatibility.
+
+See `configs/read_heavy_with_metrics_db.json` for a complete example.
 
 ### Query File Organization
 
